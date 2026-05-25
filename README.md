@@ -1,15 +1,6 @@
----
-title: Beyond The Space
-emoji: 🌍
-colorFrom: yellow
-colorTo: indigo
-sdk: docker
-pinned: false
-license: apache-2.0
-short_description: From aggregate to itemized - tamper-proof, automated billing
----
 
-# ⚡ Beyond the One Number
+
+#  Beyond the One Number
 
 > **From aggregate to itemized — tamper-proof, automated billing for every home.**
 
