@@ -1,0 +1,20 @@
+{
+  "label_map": {
+    "Refrigerator": 0,
+    "AC": 1,
+    "WashingMachine": 2,
+    "Microwave": 3,
+    "TV": 4,
+    "WaterHeater": 5,
+    "Standby": 6
+  },
+  "idx_to_label": {
+    "0": "Refrigerator",
+    "1": "AC",
+    "2": "WashingMachine",
+    "3": "Microwave",
+    "4": "TV",
+    "5": "WaterHeater",
+    "6": "Standby"
+  }
+}
