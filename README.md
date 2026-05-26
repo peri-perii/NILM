@@ -1,4 +1,14 @@
-
+---
+title: Beyond The Space
+emoji: 🌍
+colorFrom: yellow
+colorTo: indigo
+sdk: streamlit
+sdk_version: "1.35.0"
+python_version: "3.11"
+app_file: app.py
+pinned: false
+---
 
 #  Beyond the One Number
 
