@@ -968,11 +968,11 @@ if df_raw is not None:
             stat.markdown(f"<span style='color:{T['tx_secondary']};font-size:.84rem;'>{msg}</span>",
                           unsafe_allow_html=True)
         try:
-            model,scaler,i2l = load_model_and_scaler()
+            model_dict, i2l = load_model_and_scaler()
         except FileNotFoundError:
             st.error("Run `python train_model.py` first."); st.stop()
         try:
-            rdf = run_nilm_inference(df_raw, model, scaler, i2l)
+            rdf = run_nilm_inference(df_raw, model_dict, i2l)
             st.session_state["result_df"] = rdf
         except Exception as e:
             st.error(f"Inference error: {e}"); st.stop()
