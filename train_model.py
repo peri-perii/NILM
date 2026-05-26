@@ -165,16 +165,48 @@ for fname, imp in sorted(zip(feat_names, importances), key=lambda x: -x[1]):
     print(f"    {fname:<8} {imp:.4f}  {bar}")
 
 # ── 8. Save artifacts ─────────────────────────────────────────────────────────
-joblib.dump(model,  "nilm_model.joblib")
-joblib.dump(scaler, "nilm_scaler.joblib")
+import json
+
+# Extract RandomForest parameters
+n_classes = int(model.n_classes_)
+classes = model.classes_.tolist()
+estimators = model.estimators_
+
+trees_data = []
+for est in estimators:
+    tree = est.tree_
+    trees_data.append({
+        "children_left": tree.children_left.tolist(),
+        "children_right": tree.children_right.tolist(),
+        "feature": tree.feature.tolist(),
+        "threshold": tree.threshold.tolist(),
+        "value": tree.value.squeeze(axis=1).tolist()  # shape (n_nodes, n_classes)
+    })
+
+# Extract StandardScaler parameters
+scaler_data = {
+    "mean": scaler.mean_.tolist(),
+    "scale": scaler.scale_.tolist(),
+    "var": scaler.var_.tolist()
+}
+
+# Combine into a single JSON model
+json_model = {
+    "n_classes": n_classes,
+    "classes": classes,
+    "scaler": scaler_data,
+    "trees": trees_data
+}
+
+with open("nilm_model.json", "w") as f:
+    json.dump(json_model, f)
 
 # Save label map for app.py
-import json
 with open("label_map.json", "w") as f:
     json.dump({"label_map": LABEL_MAP, "idx_to_label": {str(k): v for k, v in IDX_TO_LABEL.items()}}, f, indent=2)
 
 print("\n  Saved:")
-print("    • nilm_model.joblib")
-print("    • nilm_scaler.joblib")
+print("    • nilm_model.json (Secure JSON-based Random Forest)")
 print("    • label_map.json")
 print("=" * 55)
+

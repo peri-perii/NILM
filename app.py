@@ -559,11 +559,13 @@ def majority_vote_smooth(labels:list[str], window:int=7)->list[str]:
 
 @st.cache_resource(show_spinner=False)
 def load_model_and_scaler():
-    m=joblib.load("nilm_model.joblib"); sc=joblib.load("nilm_scaler.joblib")
-    with open("label_map.json") as f: lmap=json.load(f)
-    return m, sc, {int(k):v for k,v in lmap["idx_to_label"].items()}
+    with open("nilm_model.json") as f:
+        model_dict = json.load(f)
+    with open("label_map.json") as f:
+        lmap = json.load(f)
+    return model_dict, {int(k):v for k,v in lmap["idx_to_label"].items()}
 
-def run_nilm_inference(df, model, scaler, i2l):
+def run_nilm_inference(df, model_dict, i2l):
     pw = df["total_power_watts"].values
     n = len(pw)
     if n < WINDOW_SIZE:
@@ -593,9 +595,48 @@ def run_nilm_inference(df, model, scaler, i2l):
     
     # Bulk feature scaling and prediction
     X = np.column_stack([mn, sd, mx, mi, rng, med, q75, q25, slope, energy])
-    X_scaled = scaler.transform(X)
-    pred_indices = model.predict(X_scaled)
-    pred_labels = [i2l[idx] for idx in pred_indices]
+    
+    # Custom StandardScaler scaling
+    scaler_data = model_dict["scaler"]
+    mean = np.array(scaler_data["mean"])
+    scale = np.array(scaler_data["scale"])
+    X_scaled = (X - mean) / scale
+    
+    # Custom secure RandomForest prediction
+    N = X_scaled.shape[0]
+    n_classes = model_dict["n_classes"]
+    probs = np.zeros((N, n_classes))
+    
+    for tree_dict in model_dict["trees"]:
+        left = np.array(tree_dict["children_left"], dtype=np.int32)
+        right = np.array(tree_dict["children_right"], dtype=np.int32)
+        feat = np.array(tree_dict["feature"], dtype=np.int32)
+        thresh = np.array(tree_dict["threshold"], dtype=np.float64)
+        val = np.array(tree_dict["value"], dtype=np.float64)
+        
+        # Traverse for each sample
+        for i in range(N):
+            x = X_scaled[i]
+            node = 0
+            while left[node] != -1:
+                f = feat[node]
+                if x[f] <= thresh[node]:
+                    node = left[node]
+                else:
+                    node = right[node]
+            
+            node_val = val[node]
+            node_sum = np.sum(node_val)
+            if node_sum > 0:
+                probs[i] += node_val / node_sum
+            else:
+                probs[i] += node_val
+                
+    probs /= len(model_dict["trees"])
+    classes = np.array(model_dict["classes"])
+    pred_indices = np.argmax(probs, axis=1)
+    
+    pred_labels = [i2l[idx] for idx in classes[pred_indices]]
     
     # Align and pad predictions
     half = WINDOW_SIZE // 2
@@ -608,6 +649,7 @@ def run_nilm_inference(df, model, scaler, i2l):
     r = df.copy()
     r["appliance"] = majority_vote_smooth(lbl)
     return r
+
 
 def compute_breakdown(rdf:pd.DataFrame)->dict[str,float]:
     bd={(a,grp["total_power_watts"].sum()/60.0) for a,grp in rdf.groupby("appliance")}
